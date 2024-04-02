@@ -30,14 +30,14 @@ TIME_EARLY=$(date -d "-$CRON_TIME min" "+%d-%m-%y_%H:%M")
 #Capture journal logs
 journalctl --no-pager -t vpn-user-portal -t www-data --since "1 hour ago" -o json > "$LOG_DIR_PATH"journal-logs.json
 
-#Capute active WireGuard peers
+#Capture active WireGuard peers
 sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
 
 #Run python script
 #./env/bin/python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json 
 OUTPUT=($( ./env/bin/python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json ))
-#echo "Output from python script: ${OUTPUT[@]}"
 
+#Notify host if an impossible travel occurred
 if echo "${OUTPUT[@]}" | grep -q "True"; then
 	mailx -s "WARNING: Impossible Travel Detected" $LOGNAME@$HOSTNAME <<< "Impossible travel has occured on your server, please check the log files for additional information"
 fi
