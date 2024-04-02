@@ -93,17 +93,11 @@ The `run_impossible_travel.sh` shell script manages the execution of the Python 
     ./run_impossible_travel.sh
 
 ### Requirements
-   - The provided examples assume that the scripts and log files have the same parent directory. The file structure can be found below:
-   <media-tag src="https://cryptpad.surfcloud.nl/blob/37/37829dc501c5ab2303ef807caef54595d970f84c8fb86ebd" data-crypto-key="cryptpad:MexFBbqY63x4oQsBDHvEg6zX8Ehc4imT66LN/iHiF9E="></media-tag>
+- The provided examples assume that the scripts and log files have the same parent directory. The file structure can be found in the images folder.
 
 - To run the python script we use a virtual environment. This can be created with `python3 -m venv /path/to/new/virtual/environment`. The shell script then takes care of activating this virtual environment. The only non-standard library in the virtual environment is the GeoIP2Fast library which can be added with `pip install geoip2fast`. 
 
 - According to the eduVPN documentation, to enable the script connection hook feature, you must ensure that the `connect_script.sh` is located in the `/usr/local/bin` folder. Additionally, the GeoIP2Fast database must also be present in this folder. Finally, the `convert_ip_to_geo.py` file needs to be converted to an executable which can accomplished by using Python's pyinstaller library. Convert this file inside the virtual environment to incorporate all necessary imports.  When converted, relocated it to the /usr/local/bin folder alongside the other files. 
 
 #### Schematic Overview
-A high-level overview of the program structure:
-
-<media-tag src="https://cryptpad.surfcloud.nl/blob/2b/2b98a398c222f5d60267645bf642d0feecc89ba797836698" data-crypto-key="cryptpad:JGHzBQtcnrESgbSag5TrSrDnjwQgSJz3mLvdZfUMGA8="></media-tag>
-
-
-
+A high-level overview of the program structure can also be found in the images folder.
