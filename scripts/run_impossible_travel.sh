@@ -5,7 +5,7 @@
 #fi
  
 #Paths to the database and log folder
-DB_PATH=../scripts/geoip2fast-asn-ipv6.dat.gz
+DB_PATH=/usr/local/bin/geoip2fast-asn-ipv6.dat.gz
 LOG_DIR_PATH=../logs/
 #Cron job time 
 CRON_TIME=5
@@ -33,8 +33,7 @@ journalctl --no-pager -t vpn-user-portal -t www-data --since "1 hour ago" -o jso
 #Capture active WireGuard peers
 sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
 
-#Run python script
-#./env/bin/python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json 
+#Run python script 
 OUTPUT=($( ./env/bin/python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json ))
 
 #Notify host if an impossible travel occurred
@@ -46,8 +45,6 @@ fi
 rm "$LOG_DIR_PATH"wireguard-peers.txt
 
 #Check if cronjob already exists for current user before adding it
-
-
 CRONJOB_EXISTS=$(crontab -u $LOGNAME -l 2>/dev/null | grep -c "run_impossible_travel.sh")
 if [ $CRONJOB_EXISTS -eq 0 ]; 
 then
