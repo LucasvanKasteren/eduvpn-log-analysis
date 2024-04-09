@@ -34,7 +34,7 @@ The purpose of this script is to not use explicit source IP address logging for 
 
 #### Tasks
 1. **Check user connection**
-    - If a user connects, the python script `convert_ip_to_geo.py` Python script is executed to transform the user's source IP address to geolocation information. To perfom this 'masking' it makes use of the GeoIP2Fast library. 
+    - If a user connects, the python script `convert_ip_to_geo.py` Python script is executed to transform the user's source IP address to geolocation information. To perfom this 'masking' it makes use of the MaxMind-DB-Reader library. 
 2. **Write masked output**
     - Afterwards the 'masked' output is written to syslog, from where it can be further processed by the rest of the tool. 
 
@@ -43,11 +43,11 @@ To make this work a few requirements are necessary which can be found in the req
 ### Python script: `impossible_travel.py` 
 
 #### Purpose
-The `impossible_travel.py` script is designed to process journalctl JSON log entries, detect suspicious login activities, and report potential security incidents. It leverages the MaxMind-DB-Reader library together with DB-IP lite databases to map IP addresses to geolocation and parses OpenVPN and WireGuard configuration data for enhanced analysis.
+The `impossible_travel.py` script is designed to process journalctl JSON log entries, detect suspicious login activities, and report potential security incidents. It leverages the MaxMind-DB-Reader library together with DB-IP Lite databases to map IP addresses to geolocation and parses OpenVPN and WireGuard configuration data for enhanced analysis.
 
 #### Functions
 1. `load_data(db_country_path, db_asn_path)`
-   - Loads the IP to Country Lite" and IP to ASN Lite databases from the specified file path using the MaxMind-DB-Reader library. This is still necessary to do source IP to geolocation conversion for WireGuard connections. 
+   - Loads the IP to Country Lite and IP to ASN Lite databases from the specified file path using the MaxMind-DB-Reader library. This is still necessary to do source IP to geolocation conversion for WireGuard connections. 
 2. `wireguard_data_to_dict(wireguard_peers)`
    - Parses the WireGuard configuration data from `wg show` to a text file and organises it into a dictionary for easy accessing. 
 3. `parse_wireguard_protocol(...)`
@@ -63,7 +63,8 @@ The `impossible_travel.py` script is designed to process journalctl JSON log ent
     python3 impossible_travel.py <journal_json_log_file> <db_country_file> <db_asn_file> <wireguard_peers> <output_file>
 
 - ```json_log_file```: Path to the journal JSON log file.
-- ```geo_data_file```: Path to the GeoIP data file.
+- ```db_country_file```: Path to the DB-IP IP to Country Lite data file.
+- ```db_asn_file```: Path to the DB-IP IP to ASN Lite data file.
 - ```wireguard_peers```: Path to the WireGuard peers configuration file.
 - ```output_file```: Path to the output file for storing results in JSON format.
 
