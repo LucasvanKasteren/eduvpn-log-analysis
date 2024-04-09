@@ -7,7 +7,7 @@ VPNs, such as eduVPN, play a crucial role in ensuring secure connections, allowi
 The "impossible travel" principle poses a potential security risk for the security eduVPN. This principle refers to a scenario where a user establishes a VPN connection from two geographically distant locations within an improbably short timeframe. This situation could indicate unauthorized access or a compromised device being used to connect to the eduVPN service. 
 
 ### Detection Approach
-To address the security risk as described above, a log analysis tool in Python 3 has been developed. This tool is designed to analyze eduVPN log files and detect potential security incidents related to the "impossible travel" principle. The tool utilizes the eduVPN logs to identify geolocation information of a connected user. To achieve this, it leverages the GeoIP2Fast library to map the source IP address to geolocation information and enhance analysis capabilities. A schematic overview can be found at the bottom of this document.
+To address the security risk as described above, a log analysis tool in Python 3 has been developed. This tool is designed to analyze eduVPN log files and detect potential security incidents related to the "impossible travel" principle. The tool utilizes the eduVPN logs to identify geolocation information of a connected user. To achieve this it leverages the [MaxMind-DB-Reader](https://github.com/maxmind/MaxMind-DB-Reader-python) together two [DB IP](https://db-ip.com/) databases, namely the "IP to Country Lite" and IP to ASN Lite", to map the source IP address to geolocation information and enhance analysis capabilities. A schematic overview can be found at the bottom of this document.
 
 #### OpenVPN vs. WireGuard
 Since eduVPN is based on both OpenVPN and WireGuard the tool distinguishes between the two. 
@@ -43,11 +43,11 @@ To make this work a few requirements are necessary which can be found in the req
 ### Python script: `impossible_travel.py` 
 
 #### Purpose
-The `impossible_travel.py` script is designed to process journalctl JSON log entries, detect suspicious login activities, and report potential security incidents. It leverages the GeoIP2Fast library to map IP addresses to geolocation and parses OpenVPN and WireGuard configuration data for enhanced analysis.
+The `impossible_travel.py` script is designed to process journalctl JSON log entries, detect suspicious login activities, and report potential security incidents. It leverages the MaxMind-DB-Reader library together with DB-IP lite databases to map IP addresses to geolocation and parses OpenVPN and WireGuard configuration data for enhanced analysis.
 
 #### Functions
-1. `load_data(geo_data_path)`
-   - Loads GeoIP data from the specified file path using the GeoIP2Fast library. This is still necessary to do source IP to geolocation conversion for WireGuard connections. 
+1. `load_data(db_country_path, db_asn_path)`
+   - Loads the IP to Country Lite" and IP to ASN Lite databases from the specified file path using the MaxMind-DB-Reader library. This is still necessary to do source IP to geolocation conversion for WireGuard connections. 
 2. `wireguard_data_to_dict(wireguard_peers)`
    - Parses the WireGuard configuration data from `wg show` to a text file and organises it into a dictionary for easy accessing. 
 3. `parse_wireguard_protocol(...)`
@@ -60,7 +60,7 @@ The `impossible_travel.py` script is designed to process journalctl JSON log ent
    - Processes a JSON log file, detects and reports potential security incidents, and returns the results as a dictionary.
 
 #### Execution
-    python3 impossible_travel.py <journal_json_log_file> <geo_data_file> <wireguard_peers> <output_file>
+    python3 impossible_travel.py <journal_json_log_file> <db_country_file> <db_asn_file> <wireguard_peers> <output_file>
 
 - ```json_log_file```: Path to the journal JSON log file.
 - ```geo_data_file```: Path to the GeoIP data file.
@@ -68,7 +68,7 @@ The `impossible_travel.py` script is designed to process journalctl JSON log ent
 - ```output_file```: Path to the output file for storing results in JSON format.
 
 ##### Example
-    python3 impossible_travel.py journal-logs.json geoip2fast-asn-ipv6.dat.gz wireguard_peers.txt output.json
+    python3 impossible_travel.py journal-logs.json dbip-country-lite-2024-04.mmdb  dbip-asn-lite-2024-04.mmdb wireguard_peers.txt output.json
 
 ### Bash shell script: `run_impossible_travel.sh`
 
@@ -95,9 +95,9 @@ The `run_impossible_travel.sh` shell script manages the execution of the Python 
 ### Requirements
 - The provided examples assume that the scripts and log files have the same parent directory. The file structure can be found in the images folder.
 
-- To run the python script we use a virtual environment. This can be created with `python3 -m venv /path/to/new/virtual/environment`. The shell script then takes care of activating this virtual environment. The only non-standard library in the virtual environment is the GeoIP2Fast library which can be added with `pip install geoip2fast`. 
+- To run the python script we use a virtual environment. This can be created with `python3 -m venv /path/to/new/virtual/environment`. The shell script then takes care of activating this virtual environment. The only non-standard library in the virtual environment is the MaxMind-DB-Reader library which can be added with `pip install maxminddb`. 
 
-- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. Additionally, the GeoIP2Fast database must also be present in this folder. Finally, the `convert_ip_to_geo.py` file needs to be converted to an executable which can accomplished by using [Python's pyinstaller library](https://pyinstaller.org/en/v4.8/usage.html). Convert this file inside the virtual environment to incorporate all necessary imports.  When converted, relocated it to the /usr/local/bin folder alongside the other files. You can also move the .exe file which can be found in the data folder to your /usr/local/bin folder.
+- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. Additionally, the both DB-IP databases must also be present in this folder. Finally, the `convert_ip_to_geo.py` file needs to be converted to an executable which can accomplished by using [Python's pyinstaller library](https://pyinstaller.org/en/v4.8/usage.html). Convert this file inside the virtual environment to incorporate all necessary imports.  When converted, relocated it to the /usr/local/bin folder alongside the other files. You can also move the .exe file which can be found in the data folder to your /usr/local/bin folder.
 
 #### Schematic Overview
 A high-level overview of the program structure can also be found in the images folder.
