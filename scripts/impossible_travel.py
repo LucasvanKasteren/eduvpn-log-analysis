@@ -6,14 +6,20 @@ from geoip2fast import GeoIP2Fast
 import sys
 import re
 from collections import defaultdict
+import maxminddb
 
 
-def load_data(geo_data_path):
-    if not exists(geo_data_path):
-        print(f"Cannot find the dataset at {geo_data_path}\n", file=sys.stderr)
+def load_data(db_country_path, db_asn_path):
+    if not exists(db_country_path) or not exists(db_asn_path):
+        print(
+            f"Cannot find dataset(s) at {db_country_path} or {db_asn_path}\n",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
-    return GeoIP2Fast(geoip2fast_data_file=geo_data_path, verbose=False)
+    return maxminddb.open_database(db_country_path), maxminddb.open_database(
+        db_asn_path
+    )
 
 
 def wireguard_data_to_dict(wireguard_peers):
@@ -80,7 +86,8 @@ def detect_impossible_travel(
 
         elif (
             last_login_info[userID][-1]["asn_name"] != asn_name
-        ):  # and last_login_info[userID][-1]["country_code"] != country_code:
+            and last_login_info[userID][-1]["country_code"] != country_code
+        ):
             # Detect if a user who previously connected has committed impossible travel
             last_timestamp_string = last_login_info[userID][-1]["timestamp"]
             last_timestamp = datetime.timestamp(
@@ -122,7 +129,8 @@ def parse_wireguard_protocol(
     datetime_object,
     timestamp_seconds,
     unique_data,
-    geoIP,
+    db_reader_country,
+    db_reader_asn,
     last_login_info,
 ):
     userInfo = re.split(r"\(|:|\)", message.split()[2])
@@ -131,9 +139,11 @@ def parse_wireguard_protocol(
     for peer in wireguard_dict["peers"]:
         public_key_connected = peer["peer"]
         source_ip = re.findall(r"[0-9]+(?:\.[0-9]+){3}", peer["endpoint"])[0]
-        geo_data = geoIP.lookup(source_ip)
-        asn_name = geo_data.asn_name
-        country_code = geo_data.country_code
+        # geo_data = geoIP.lookup(source_ip)
+        country_dict = db_reader_country.get(source_ip)
+        country_code = country_dict["country"]["iso_code"]
+        asn_dict = db_reader_asn.get(source_ip)
+        asn_name = asn_dict["autonomous_system_organization"]
         # Map the public key of connected user to the one in the logs to check if the user is still connected
         if public_key_peer_logs == public_key_connected:
             result = detect_impossible_travel(
@@ -155,7 +165,14 @@ def parse_wireguard_protocol(
     return None
 
 
-def parse_log_entry(log_entry, geoIP, unique_data, last_login_info, wireguard_dict):
+def parse_log_entry(
+    log_entry,
+    db_reader_country,
+    db_reader_asn,
+    unique_data,
+    last_login_info,
+    wireguard_dict,
+):
     message = log_entry["MESSAGE"]
     userID = message.split()[1]
     timestamp_microseconds = int(log_entry["__REALTIME_TIMESTAMP"])
@@ -172,7 +189,8 @@ def parse_log_entry(log_entry, geoIP, unique_data, last_login_info, wireguard_di
                     datetime_object,
                     timestamp_seconds,
                     unique_data,
-                    geoIP,
+                    db_reader_country,
+                    db_reader_asn,
                     last_login_info,
                 )
                 return result
@@ -204,7 +222,7 @@ def parse_log_entry(log_entry, geoIP, unique_data, last_login_info, wireguard_di
     return None
 
 
-def get_log_details(json_path, geoIP, wireguard_peers):
+def get_log_details(json_path, db_reader_country, db_reader_asn, wireguard_peers):
     if not exists(json_path):
         print("Cannot find given json\n", file=sys.stderr)
         sys.exit(1)
@@ -218,7 +236,12 @@ def get_log_details(json_path, geoIP, wireguard_peers):
         for line in json_file:
             log_dict = json.loads(line)
             result = parse_log_entry(
-                log_dict, geoIP, unique_data, last_login_info, wireguard_dict
+                log_dict,
+                db_reader_country,
+                db_reader_asn,
+                unique_data,
+                last_login_info,
+                wireguard_dict,
             )
             if result:
                 userID, log_details = result
@@ -228,18 +251,26 @@ def get_log_details(json_path, geoIP, wireguard_peers):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 5:
+    if len(sys.argv) != 6:
         print(
-            "Usage: python impossible_travel.py <journal_json_log_file> <geo_data_file> <wireguard_peers> <output_file>\n",
+            "Usage: python impossible_travel.py <journal_json_log_file> <db_country_file> <db_asn_file> <wireguard_peers> <output_file>\n",
             file=sys.stderr,
         )
         sys.exit(1)
 
-    journal_json_log_file, geo_data_file, wireguard_peers, output_file = sys.argv[1:5]
+    (
+        journal_json_log_file,
+        db_country_file,
+        db_asn_file,
+        wireguard_peers,
+        output_file,
+    ) = sys.argv[1:6]
 
-    geoIP = load_data(geo_data_file)
+    db_reader_country, db_reader_asn = load_data(db_country_file, db_asn_file)
 
-    results = get_log_details(journal_json_log_file, geoIP, wireguard_peers)
+    results = get_log_details(
+        journal_json_log_file, db_reader_country, db_reader_asn, wireguard_peers
+    )
 
     if results:
         with open(output_file, "w") as fp:

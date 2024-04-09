@@ -5,9 +5,10 @@
 #fi
  
 #Paths to the database and log folder
-DB_PATH=/usr/local/bin/geoip2fast-asn-ipv6.dat.gz
+DB_PATH_COUNTRY=/usr/local/bin/dbip-country-lite-2024-04.mmdb
+DB_PATH_ASN=/usr/local/bin/dbip-asn-lite-2024-04.mmdb
 LOG_DIR_PATH=../logs/
-#Cron job time 
+#Cron job time in minutes
 CRON_TIME=5
 
 create_directory() {
@@ -33,7 +34,7 @@ journalctl --no-pager -t vpn-user-portal -t www-data --since "1 hour ago" -o jso
 sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
 
 #Run python script 
-mapfile -t OUTPUT < <(./env/bin/python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json)
+mapfile -t OUTPUT < <(./env/bin/python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH_COUNTRY $DB_PATH_ASN "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json)
 
 #Notify host if an impossible travel occurred
 if echo "${OUTPUT[@]}" | grep -q "True"; then
