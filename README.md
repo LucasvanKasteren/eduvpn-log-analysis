@@ -96,9 +96,19 @@ The `run_impossible_travel.sh` shell script manages the execution of the Python 
 ### Requirements
 - The provided examples assume that the scripts and log files have the same parent directory. The file structure can be found in the images folder.
 
-- To run the python script we use a virtual environment. This can be created with `python3 -m venv /path/to/new/virtual/environment`. The shell script then takes care of activating this virtual environment. The only non-standard library in the virtual environment is the MaxMind-DB-Reader library which can be added with `pip install maxminddb`. 
+- To run the python script we use python. Specifically it was tested using python3.11.2 
 
-- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. Additionally, the both DB-IP databases must also be present in this folder. Finally, the `convert_ip_to_geo.py` file needs to be converted to an executable which can accomplished by using [Python's pyinstaller library](https://pyinstaller.org/en/v4.8/usage.html). Convert this file inside the virtual environment to incorporate all necessary imports.  When converted, relocated it to the /usr/local/bin folder alongside the other files. You can also move the .exe file which can be found in the data folder to your /usr/local/bin folder.
+- The only non standard python library used is the MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `dnf install python3-maxminddb`.
+
+- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. Additionally, the both DB-IP databases must also be present in this folder. Finally, the .exe from `convert_ip_to_geo.py`file (located in the data folder) needs to be relocated to the same folder as above.
+
+### Deployment steps
+1. Setup your eduVPN server, check out the [docs](https://docs.eduvpn.org/server/v3/)
+2. Enable the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) as explained in the docs. 
+3. Install MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `dnf install python3-maxminddb`.
+4. Fork this repository on your eduVPN server.
+5. Move the files from the data folder together with the `connect_script.sh` to the same folder as where you enabled the script connection hook.
+6. Go inside the scripts folder and run the tool with `./run_impossible_travel.sh`
 
 #### Schematic Overview
 A high-level overview of the program structure can also be found in the images folder.
