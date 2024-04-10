@@ -18,9 +18,9 @@ WireGuard does not have the functionality of using the script connection hook, d
 The limitation of WireGuard here is that it is only possible to capture the source IPs of active connections. Hence, a WireGuard connection can still evade detection if it connects and disconnects before the script runs again. To minimize this risk, a cronjob for repeated execution of the script is setup to run every 5 minutes. 
 
 ## Deployment steps
-1. Setup your eduVPN server, check out the [docs](https://docs.eduvpn.org/server/v3/)
+1. Setup your eduVPN server, check out the [docs](https://docs.eduvpn.org/server/v3/).
 2. Enable the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) as explained in the docs. 
-3. Install MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `dnf install python3-maxminddb`.
+3. Install MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `sudo dnf install python3-maxminddb`.
 4. Fork this repository on your eduVPN server.
 5. Move the files from the data folder together with the `connect_script.sh` to the same folder as where you enabled the script connection hook.
 6. Go inside the scripts folder and run the tool with `./run_impossible_travel.sh`
@@ -104,11 +104,11 @@ The `run_impossible_travel.sh` shell script manages the execution of the Python 
 ### Requirements
 - The provided examples assume that the scripts and log files have the same parent directory. The file structure can be found in the images folder.
 
-- To run the python script we use python. Specifically it was tested using python3.11.2 
+- To run the python script we use python. Specifically it was tested using python3.11.2.
 
 - The only non standard python library used is the MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `dnf install python3-maxminddb`.
 
-- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. Additionally, the both DB-IP databases must also be present in this folder. Finally, the .exe from `convert_ip_to_geo.py`file (located in the data folder) needs to be relocated to the same folder as above.
+- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. Additionally, both DB-IP databases and the .exe from `convert_ip_to_geo.py`file (located in the data folder) need to be relocated to this particular folder.
 
 #### Schematic Overview
 A high-level overview of the program structure can also be found in the images folder.
