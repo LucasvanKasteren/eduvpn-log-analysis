@@ -2,7 +2,6 @@ import json
 from os.path import exists
 import ipaddress
 from datetime import datetime
-from geoip2fast import GeoIP2Fast
 import sys
 import re
 from collections import defaultdict
