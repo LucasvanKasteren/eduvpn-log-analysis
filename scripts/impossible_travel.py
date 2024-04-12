@@ -173,6 +173,7 @@ def parse_log_entry(
     wireguard_dict,
 ):
     message = log_entry["MESSAGE"]
+ #   print(f"MESSAGE {message}")
     userID = message.split()[1]
     timestamp_microseconds = int(log_entry["__REALTIME_TIMESTAMP"])
     timestamp_seconds = timestamp_microseconds / 1000000

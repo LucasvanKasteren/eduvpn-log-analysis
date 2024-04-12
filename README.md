@@ -7,7 +7,7 @@ VPNs, such as eduVPN, play a crucial role in ensuring secure connections, allowi
 The "impossible travel" principle poses a potential security risk for the security eduVPN. This principle refers to a scenario where a user establishes a VPN connection from two geographically distant locations within an improbably short timeframe. This situation could indicate unauthorized access or a compromised device being used to connect to the eduVPN service. 
 
 ### Detection Approach
-To address the security risk as described above, a log analysis tool in Python 3 has been developed. This tool is designed to analyze eduVPN log files and detect potential security incidents related to the "impossible travel" principle. The tool utilizes the eduVPN logs to identify geolocation information of a connected user. To achieve this it leverages the [MaxMind-DB-Reader](https://github.com/maxmind/MaxMind-DB-Reader-python) together two [DB IP](https://db-ip.com/) databases, namely the "IP to Country Lite" and IP to ASN Lite", to map the source IP address to geolocation information and enhance analysis capabilities. A schematic overview can be found at the bottom of this document.
+To address the security risk as described above, a log analysis tool in Python 3 has been developed. This tool is designed to analyze eduVPN log files and detect potential security incidents related to the "impossible travel" principle. The tool utilizes the eduVPN logs to identify geolocation information of a connected user. To achieve this it leverages the `mmdblookup` command together with two [DB IP](https://db-ip.com/) databases, namely the "IP to Country Lite" and IP to ASN Lite", to map the source IP address to geolocation information and enhance analysis capabilities. A schematic overview can be found at the bottom of this document.
 
 #### OpenVPN vs. WireGuard
 Since eduVPN is based on both OpenVPN and WireGuard the tool distinguishes between the two. 
@@ -20,9 +20,9 @@ The limitation of WireGuard here is that it is only possible to capture the sour
 ## Deployment steps
 1. Setup your eduVPN server, check out the [docs](https://docs.eduvpn.org/server/v3/).
 2. Enable the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) as explained in the docs. 
-3. Install MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `sudo dnf install python3-maxminddb`.
+3. Install the mmdblookup command from the libmaxminddb library. For Debian and Ubuntu: `sudo apt-get install mmdb-bin`. For Fedora: `sudo dnf install libmaxminddb-devel`.
 4. Fork this repository on your eduVPN server.
-5. Move the files from the data folder together with the `connect_script.sh` to the same folder as where you enabled the script connection hook.
+5. Move the files from the data folder together with the `connect_script.sh` to the `/usr/local/bin/` folder.
 6. Go inside the scripts folder and run the tool with `./run_impossible_travel.sh`
 
 ## Implementation
@@ -33,7 +33,7 @@ The log analysis tool consists of two main components located in a folder togeth
 
 The tool also uses one smaller component:
 
-3. **Script Connection Hook** (`connect_script.sh`) - This small script executes a python executable, which converts the source IP address for OpenVPN and returns the user, its asn name and country code to syslog. 
+3. **Script Connection Hook** (`connect_script.sh`) - This small script uses the mmdblookup command and converts the source IP address for OpenVPN and returns the user, its asn name and country code to syslog. 
 
 ### Script Connection Hook: `connect_script.sh`
 
@@ -42,7 +42,7 @@ The purpose of this script is to not use explicit source IP address logging for 
 
 #### Tasks
 1. **Check user connection**
-    - If a user connects, the python script `convert_ip_to_geo.py` Python script is executed to transform the user's source IP address to geolocation information. To perfom this 'masking' it makes use of the MaxMind-DB-Reader library. 
+    - If a user connects and the environment variables are set, we transform the user's source IP address to geolocation information. To perfom this 'masking' it makes use of the `mmdblookup` command to lookup the source IP address in the MaxMind DB file. 
 2. **Write masked output**
     - Afterwards the 'masked' output is written to syslog, from where it can be further processed by the rest of the tool. 
 
@@ -106,9 +106,9 @@ The `run_impossible_travel.sh` shell script manages the execution of the Python 
 
 - To run the python script we use python. Specifically it was tested using python3.11.2.
 
-- The only non standard python library used is the MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `dnf install python3-maxminddb`.
+- The `mmdblookup` command used to make the connect_script work can be found in the libmaxminddb library. For Debian and Ubuntu: `sudo apt-get install mmdb-bin`. For Fedora: `dnf install libmaxminddb-devel`.
 
-- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. Additionally, both DB-IP databases and the .exe from `convert_ip_to_geo.py`file (located in the data folder) need to be relocated to this particular folder.
+- According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `connect_script.sh` is in the `/usr/local/bin` folder. For now it only works if you put both the connect_script.sh and both the databases in this folder.
 
 #### Schematic Overview
 A high-level overview of the program structure can also be found in the images folder.

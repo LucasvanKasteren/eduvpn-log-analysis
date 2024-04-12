@@ -28,7 +28,7 @@ create_directory "$LOG_DIR_PATH"
 TIME_NOW=$(date +"%d-%m-%y_%H:%M")
 
 #Capture journal logs
-journalctl --no-pager -t vpn-user-portal -t www-data --since "1 hour ago" -o json > "$LOG_DIR_PATH"journal-logs.json
+journalctl --no-pager -t vpn-user-portal -t connect_script --since "1 hour ago" -o json > "$LOG_DIR_PATH"journal-logs.json
 
 #Capture active WireGuard peers
 sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
