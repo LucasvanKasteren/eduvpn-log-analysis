@@ -7,23 +7,24 @@ VPNs, such as eduVPN, play a crucial role in ensuring secure connections, allowi
 The "impossible travel" principle poses a potential security risk for the security eduVPN. This principle refers to a scenario where a user establishes a VPN connection from two geographically distant locations within an improbably short timeframe. This situation could indicate unauthorized access or a compromised device being used to connect to the eduVPN service. 
 
 ### Detection Approach
-To address the security risk as described above, a log analysis tool in Python 3 has been developed. This tool is designed to analyze eduVPN log files and detect potential security incidents related to the "impossible travel" principle. The tool utilizes the eduVPN logs to identify geolocation information of a connected user. To achieve this it leverages the `mmdblookup` command together with two [DB IP](https://db-ip.com/) databases, namely the "IP to Country Lite" and IP to ASN Lite", to map the source IP address to geolocation information and enhance analysis capabilities. A schematic overview can be found at the bottom of this document.
+To address the security risk as described above, a log analysis tool in Python 3 has been developed. This tool is designed to analyze eduVPN log files and detect potential security incidents related to the "impossible travel" principle. The tool utilizes the eduVPN logs to identify geolocation information of a connected user. To achieve this it leverages the `mmdblookup` command and the [MaxMind-DB-Reader](https://github.com/maxmind/MaxMind-DB-Reader-python) Python library together with two [DB IP](https://db-ip.com/) databases, namely the "IP to Country Lite" and IP to ASN Lite", to map the source IP address to geolocation information and enhance analysis capabilities. A schematic overview can be found at the bottom of this document.
 
 #### OpenVPN vs. WireGuard
 Since eduVPN is based on both OpenVPN and WireGuard the tool distinguishes between the two. 
 For openVPN the tool utilizes the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) to map the source IP of a connected user directly to geolocation information. This is done instead of explicit OpenVPN logging to preserve user privacy. 
 
-WireGuard does not have the functionality of using the script connection hook, demanding the use of the `wg show all` command to identify all active peers and their source IPs. The output of the command is written to a text file and converted to a dictionary. The journal logs are only used to map the public key of a connected user to the source IP in the dictionary created with `wg show all`. Afterwards, the text file is removed and hence no explicit logging is kept. 
+WireGuard does not have the functionality of using the script connection hook, demanding the use of the `wg show all` command to identify all active peers and their source IPs. The output of the command is written to a text file and converted to a dictionary. The journal logs are only used to map the public key of a connected user to the source IP in the dictionary created with `wg show all`. Afterwards, the text file is removed and hence no explicit logging is kept. Moreover, for WireGuard we use the MaxMind-DB-Reader python library to map the source IP of an activate WireGuard connection to geolocation information. 
 
 The limitation of WireGuard here is that it is only possible to capture the source IPs of active connections. Hence, a WireGuard connection can still evade detection if it connects and disconnects before the script runs again. To minimize this risk, a cronjob for repeated execution of the script is setup to run every 5 minutes. 
 
 ## Deployment steps
 1. Setup your eduVPN server, check out the [docs](https://docs.eduvpn.org/server/v3/).
 2. Enable the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) as explained in the docs. 
-3. Install the mmdblookup command from the libmaxminddb library. For Debian and Ubuntu: `sudo apt-get install mmdb-bin`. For Fedora: `sudo dnf install libmaxminddb-devel`.
-4. Fork this repository on your eduVPN server.
-5. Move the files from the data folder together with the `connect_script.sh` to the `/usr/local/bin/` folder.
-6. Go inside the scripts folder and run the tool with `./run_impossible_travel.sh`
+3. Install the `mmdblookup` command from the libmaxminddb library. For Debian and Ubuntu: `sudo apt-get install mmdb-bin`. For Fedora: `sudo dnf install libmaxminddb-devel`.
+4. Install MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `sudo dnf install python3-maxminddb`.
+5. Fork this repository on your eduVPN server.
+6. Move the files from the data folder together with the `connect_script.sh` to the `/usr/local/bin/` folder.
+7. Go inside the scripts folder and run the tool with `./run_impossible_travel.sh`
 
 ## Implementation
 The log analysis tool consists of two main components located in a folder together:
@@ -105,6 +106,8 @@ The `run_impossible_travel.sh` shell script manages the execution of the Python 
 - The provided examples assume that the scripts and log files have the same parent directory. The file structure can be found in the images folder.
 
 - To run the python script we use python. Specifically it was tested using python3.11.2.
+
+-  The only non standard python library used is the MaxMind-DB-Reader library. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb`. For Fedora: `dnf install python3-maxminddb`.
 
 - The `mmdblookup` command used to make the connect_script work can be found in the libmaxminddb library. For Debian and Ubuntu: `sudo apt-get install mmdb-bin`. For Fedora: `dnf install libmaxminddb-devel`.
 
