@@ -6,19 +6,20 @@ import sys
 import re
 from collections import defaultdict
 import maxminddb
+from geopy.distance import geodesic as GD
 
 
-def load_data(db_country_path, db_asn_path):
-    if not exists(db_country_path) or not exists(db_asn_path):
+def load_data(db_file_path):
+    if not exists(db_file_path):  # or not exists(db_asn_path):
         print(
-            f"Cannot find dataset(s) at {db_country_path} or {db_asn_path}\n",
+            f"Cannot find dataset(s) at {db_file_path}\n",  # or {db_asn_path}\n",
             file=sys.stderr,
         )
         sys.exit(1)
 
-    return maxminddb.open_database(db_country_path), maxminddb.open_database(
-        db_asn_path
-    )
+    return maxminddb.open_database(db_file_path)  # , maxminddb.open_database(
+    #  db_city_path
+    # )
 
 
 def wireguard_data_to_dict(wireguard_peers):
@@ -56,7 +57,8 @@ def wireguard_data_to_dict(wireguard_peers):
 
 def detect_impossible_travel(
     userID,
-    asn_name,
+    city,
+    coordinates,
     country_code,
     unique_data,
     last_login_info,
@@ -65,8 +67,8 @@ def detect_impossible_travel(
     protocol,
     travel_flag=False,
 ):
-    if (userID, asn_name, country_code) not in unique_data:
-        unique_data.add((userID, asn_name, country_code))
+    if (userID, city, coordinates, country_code) not in unique_data:
+        unique_data.add((userID, city, coordinates, country_code))
 
         if not last_login_info[
             userID
@@ -75,7 +77,8 @@ def detect_impossible_travel(
                 {
                     "timestamp": str(datetime_object),
                     "protocol": protocol,
-                    "asn_name": asn_name,
+                    "city": city,
+                    "coordinates": coordinates,
                     "country_code": country_code,
                     "impossible_travel_flag": travel_flag,
                 }
@@ -83,31 +86,37 @@ def detect_impossible_travel(
 
             return userID, last_login_info[userID][-1]
 
-        elif (
-            last_login_info[userID][-1]["asn_name"] != asn_name
-            and last_login_info[userID][-1]["country_code"] != country_code
+        elif (  # Check if a user who previously logged in, is in a different city
+            last_login_info[userID][-1]["city"] != city
         ):
-            # Detect if a user who previously connected has committed impossible travel
             last_timestamp_string = last_login_info[userID][-1]["timestamp"]
             last_timestamp = datetime.timestamp(
                 datetime.strptime(last_timestamp_string, "%Y-%m-%d %H:%M:%S.%f")
             )
             time_difference = timestamp_seconds - last_timestamp
-            if time_difference < 1800:
+            old_coordinates = last_login_info[userID][-1]["coordinates"]
+            # Calculate the distance between the old login and new login using the geodesic distance
+            distance = GD(coordinates, old_coordinates).km
+            # Convert time difference from seconds to hours
+            speed = distance / (time_difference / 3600)
+            max_speed = 3600
+
+            if speed > max_speed:  # Travelled faster than 1000km/h
                 travel_flag = True
                 print(
-                    f"Impossible travel flag set to {travel_flag} for user {userID}. Last login from geo location {asn_name} in country {country_code} at {datetime_object}.\n"
+                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km from {last_login_info[userID][-1]["city"]} to {city} at speed {speed} km/h for {time_difference/3600} hrs.\n Last login from {city} in {country_code} at {datetime_object}.\n'
                 )
             else:
                 print(
-                    f"Impossible travel flag set to {travel_flag} for user {userID}. User hopped location within a valid timespan.\n"
+                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km from {last_login_info[userID][-1]["city"]} to {city} at speed {speed} km/h for {time_difference/3600} hrs.\n User hopped location within a valid timespan with last login from {city} in {country_code} at {datetime_object}.\n'
                 )
 
         last_login_info[userID].append(
             {
                 "timestamp": str(datetime_object),
                 "protocol": protocol,
-                "asn_name": asn_name,
+                "city": city,
+                "coordinates": coordinates,
                 "country_code": country_code,
                 "impossible_travel_flag": travel_flag,
             }
@@ -128,8 +137,7 @@ def parse_wireguard_protocol(
     datetime_object,
     timestamp_seconds,
     unique_data,
-    db_reader_country,
-    db_reader_asn,
+    db_reader,
     last_login_info,
 ):
     userInfo = re.split(r"\(|:|\)", message.split()[2])
@@ -138,16 +146,19 @@ def parse_wireguard_protocol(
     for peer in wireguard_dict["peers"]:
         public_key_connected = peer["peer"]
         source_ip = re.findall(r"[0-9]+(?:\.[0-9]+){3}", peer["endpoint"])[0]
-        # geo_data = geoIP.lookup(source_ip)
-        country_dict = db_reader_country.get(source_ip)
-        country_code = country_dict["country"]["iso_code"]
-        asn_dict = db_reader_asn.get(source_ip)
-        asn_name = asn_dict["autonomous_system_organization"]
+        db_dict = db_reader.get(source_ip)
+        country_code = db_dict["country"]["iso_code"]
+        city = db_dict["city"]["names"]["en"]
+        coordinates = (
+            db_dict["location"]["latitude"],
+            db_dict["location"]["longitude"],
+        )
         # Map the public key of connected user to the one in the logs to check if the user is still connected
         if public_key_peer_logs == public_key_connected:
             result = detect_impossible_travel(
                 userID,
-                asn_name,
+                city,
+                coordinates,
                 country_code,
                 unique_data,
                 last_login_info,
@@ -166,14 +177,12 @@ def parse_wireguard_protocol(
 
 def parse_log_entry(
     log_entry,
-    db_reader_country,
-    db_reader_asn,
+    db_reader,
     unique_data,
     last_login_info,
     wireguard_dict,
 ):
     message = log_entry["MESSAGE"]
- #   print(f"MESSAGE {message}")
     userID = message.split()[1]
     timestamp_microseconds = int(log_entry["__REALTIME_TIMESTAMP"])
     timestamp_seconds = timestamp_microseconds / 1000000
@@ -189,8 +198,7 @@ def parse_log_entry(
                     datetime_object,
                     timestamp_seconds,
                     unique_data,
-                    db_reader_country,
-                    db_reader_asn,
+                    db_reader,
                     last_login_info,
                 )
                 return result
@@ -199,12 +207,14 @@ def parse_log_entry(
 
         else:  # Do openVPN parsing
             if message.split()[0] == "LOCATION":
-                asn_name_list = message.split()[3:-1]
-                asn_name = " ".join(asn_name_list)
+                city_name_list = message.split()[3:-3]
+                city_name = " ".join(city_name_list)
                 country_code = message.split()[-1]
+                coordinates = (message.split()[-3], message.split()[-2])
                 result = detect_impossible_travel(
                     userID,
-                    asn_name,
+                    city_name,
+                    coordinates,
                     country_code,
                     unique_data,
                     last_login_info,
@@ -222,7 +232,7 @@ def parse_log_entry(
     return None
 
 
-def get_log_details(json_path, db_reader_country, db_reader_asn, wireguard_peers):
+def get_log_details(json_path, db_reader, wireguard_peers):
     if not exists(json_path):
         print("Cannot find given json\n", file=sys.stderr)
         sys.exit(1)
@@ -237,8 +247,7 @@ def get_log_details(json_path, db_reader_country, db_reader_asn, wireguard_peers
             log_dict = json.loads(line)
             result = parse_log_entry(
                 log_dict,
-                db_reader_country,
-                db_reader_asn,
+                db_reader,
                 unique_data,
                 last_login_info,
                 wireguard_dict,
@@ -251,26 +260,23 @@ def get_log_details(json_path, db_reader_country, db_reader_asn, wireguard_peers
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 6:
+    if len(sys.argv) != 5:
         print(
-            "Usage: python impossible_travel.py <journal_json_log_file> <db_country_file> <db_asn_file> <wireguard_peers> <output_file>\n",
+            "Usage: python impossible_travel.py <journal_json_log_file> <db_file> <wireguard_peers> <output_file>\n",
             file=sys.stderr,
         )
         sys.exit(1)
 
     (
         journal_json_log_file,
-        db_country_file,
-        db_asn_file,
+        db_file,
         wireguard_peers,
         output_file,
     ) = sys.argv[1:6]
 
-    db_reader_country, db_reader_asn = load_data(db_country_file, db_asn_file)
+    db_reader = load_data(db_file)
 
-    results = get_log_details(
-        journal_json_log_file, db_reader_country, db_reader_asn, wireguard_peers
-    )
+    results = get_log_details(journal_json_log_file, db_reader, wireguard_peers)
 
     if results:
         with open(output_file, "w") as fp:

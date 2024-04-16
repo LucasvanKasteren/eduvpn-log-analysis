@@ -5,8 +5,7 @@
 #fi
  
 #Paths to the database and log folder
-DB_PATH_COUNTRY=/usr/local/bin/dbip-country-lite-2024-04.mmdb
-DB_PATH_ASN=/usr/local/bin/dbip-asn-lite-2024-04.mmdb
+DB_PATH=/usr/local/bin/dbip-city-lite-2024-04.mmdb
 LOG_DIR_PATH=../logs/
 #Cron job time in minutes
 CRON_TIME=5
@@ -28,13 +27,13 @@ create_directory "$LOG_DIR_PATH"
 TIME_NOW=$(date +"%d-%m-%y_%H:%M")
 
 #Capture journal logs
-journalctl --no-pager -t vpn-user-portal -t connect_script --since "1 hour ago" -o json > "$LOG_DIR_PATH"journal-logs.json
+journalctl --no-pager -t vpn-user-portal -t connect_script --since "30 minutes ago" -o json > "$LOG_DIR_PATH"journal-logs.json
 
 #Capture active WireGuard peers
 sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
 
 #Run python script 
-mapfile -t OUTPUT < <(python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH_COUNTRY $DB_PATH_ASN "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json)
+mapfile -t OUTPUT < <(python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json)
 
 #Notify host if an impossible travel occurred
 if echo "${OUTPUT[@]}" | grep -q "True"; then
