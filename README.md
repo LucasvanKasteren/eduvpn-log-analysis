@@ -19,11 +19,12 @@ The limitation of WireGuard here is that it is only possible to capture the sour
 
 ## Deployment steps
 1. Setup your eduVPN server, check out the [docs](https://docs.eduvpn.org/server/v3/).
-2. Enable the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) as explained in the docs. 
-3. Install the libmaxminddb library, MaxMind-DB-Reader library and the python3-geopy library. Debian and Ubuntu: `sudo apt-get install python3-maxminddb python3-geopy mmdb-bin`. For Fedora: `sudo dnf install python3-maxminddb python3-geopy libmaxminddb-devel`.
-4. Fork this repository on to your eduVPN server.
-5. Move the "IP to City Lite" database from db-ip together with the `connect_script.sh` to the `/usr/local/bin/` folder.
-6. Go inside the scripts folder and run the tool with `./run_impossible_travel.sh`
+2. Enable the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) as explained in the docs.
+3. Download the latest IP to City database from DB-IP [here](https://db-ip.com/db/download/ip-to-city-lite).  
+4. Install the libmaxminddb library, MaxMind-DB-Reader library and the python3-geopy library. Debian and Ubuntu: `sudo apt-get install python3-maxminddb python3-geopy mmdb-bin`. For Fedora: `sudo dnf install python3-maxminddb python3-geopy libmaxminddb-devel`.
+5. Fork this repository on to your eduVPN server.
+6. Move the "IP to City Lite" database from db-ip together with the `connect_script.sh` to the `/usr/local/bin/` folder.
+7. Go inside the scripts folder and run the tool with `./run_impossible_travel.sh`
 
 ## Implementation
 The log analysis tool consists of two main components located in a folder together:
