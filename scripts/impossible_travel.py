@@ -86,8 +86,8 @@ def detect_impossible_travel(
 
             return userID, last_login_info[userID][-1]
 
-        elif (  # Check if a user who previously logged in, is in a different city
-            last_login_info[userID][-1]["city"] != city
+        elif (  # Check if a user who previously logged in, has different coordinates
+            last_login_info[userID][-1]["coordinates"] != coordinates
         ):
             last_timestamp_string = last_login_info[userID][-1]["timestamp"]
             last_timestamp = datetime.timestamp(
@@ -123,9 +123,6 @@ def detect_impossible_travel(
         )
 
         return userID, last_login_info[userID][-1]
-
-    # else:
-    #    print(f"User {userID} connected with {protocol} has already been seen at {asn_name} in country {country_code}.\n", file=sys.stderr)
 
     return None
 
