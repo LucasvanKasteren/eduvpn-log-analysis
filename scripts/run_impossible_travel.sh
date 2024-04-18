@@ -35,7 +35,6 @@ sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
 #Run python script 
 mapfile -t OUTPUT < <(python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json)
 
-echo "OUPUT FROM PYTHON: ${OUTPUT[@]}"
 #Notify host if an impossible travel occurred
 if echo "${OUTPUT[@]}" | grep -q "True"; then
 	mailx -s "WARNING: Impossible Travel Detected" "$LOGNAME"@"$HOSTNAME" <<< "Impossible travel has occured on your server, please check the log files for additional information"
@@ -43,16 +42,16 @@ fi
 
 #Remove logged wireguard data
 rm "$LOG_DIR_PATH"wireguard-peers.txt
-: '
+
 #Check if cronjob already exists for current user before adding it
-CRONJOB_EXISTS=$(crontab -u "$LOGNAME" -l 2>/dev/null | grep -c "run_impossible_travel.sh")
+CRONJOB_EXISTS=$(crontab -l 2>/dev/null | grep -c "run_impossible_travel.sh")
 
 if [ "$CRONJOB_EXISTS" -eq 0 ]; 
 then
 	echo "Trying to add cronjob"
-	(crontab -l 2>/dev/null; echo "*/$CRON_TIME * * * * cd $HOME/eduvpn-log-analysis/scripts && ./run_impossible_travel.sh > $HOME/eduvpn-log-analysis/logs/cronjob.log 2>&1") | crontab -u "$LOGNAME" -
+	(crontab -l 2>/dev/null; echo "*/$CRON_TIME * * * * cd $HOME/eduvpn-log-analysis/scripts && ./run_impossible_travel.sh > $HOME/eduvpn-log-analysis/logs/cronjob.log 2>&1") | crontab -
 	echo "Cronjob added."
 else
 	echo "Cronjob already exists."
 fi
-'
+
