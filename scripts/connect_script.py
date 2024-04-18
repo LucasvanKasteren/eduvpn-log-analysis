@@ -8,10 +8,13 @@ import syslog
 def main():
     ev = os.getenv("VPN_EVENT")
     user_id = os.getenv("VPN_USER_ID")
+    proto = os.getenv("VPN_PROTO")
     if ev != "C":
         syslog.syslog(syslog.LOG_INFO, f"User {user_id} disconnected")
         return
     orig_ip = os.getenv("VPN_ORIGINATING_IP")
+    if not orig_ip:
+        return
     db = None
     with maxminddb.open_database(
         "/usr/local/bin/dbip-city-lite-2024-04.mmdb"
