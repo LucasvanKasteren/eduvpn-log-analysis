@@ -57,7 +57,7 @@ def wireguard_data_to_dict(wireguard_peers):
 
 def detect_impossible_travel(
     userID,
-    city,
+   # city,
     coordinates,
     country_code,
     unique_data,
@@ -67,8 +67,8 @@ def detect_impossible_travel(
     protocol,
     travel_flag=False,
 ):
-    if (userID, city, coordinates, country_code) not in unique_data:
-        unique_data.add((userID, city, coordinates, country_code))
+    if (userID, coordinates, country_code) not in unique_data:
+        unique_data.add((userID, coordinates, country_code))
 
         if not last_login_info[
             userID
@@ -77,7 +77,7 @@ def detect_impossible_travel(
                 {
                     "timestamp": str(datetime_object),
                     "protocol": protocol,
-                    "city": city,
+#                    "city": city,
                     "coordinates": coordinates,
                     "country_code": country_code,
                     "impossible_travel_flag": travel_flag,
@@ -104,18 +104,18 @@ def detect_impossible_travel(
             if speed > max_speed:  # Travelled faster than 1000km/h
                 travel_flag = True
                 print(
-                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km from {last_login_info[userID][-1]["city"]} to {city} at speed {speed} km/h for {time_difference/3600} hrs.\n Last login from {city} in {country_code} at {datetime_object}.\n'
+                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n Last login from {coordinates} in {country_code} at {datetime_object}.\n'
                 )
             else:
                 print(
-                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km from {last_login_info[userID][-1]["city"]} to {city} at speed {speed} km/h for {time_difference/3600} hrs.\n User hopped location within a valid timespan with last login from {city} in {country_code} at {datetime_object}.\n'
+                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n User hopped location within a valid timespan with last login from {coordinates} in {country_code} at {datetime_object}.\n'
                 )
 
         last_login_info[userID].append(
             {
                 "timestamp": str(datetime_object),
                 "protocol": protocol,
-                "city": city,
+ #               "city": city,
                 "coordinates": coordinates,
                 "country_code": country_code,
                 "impossible_travel_flag": travel_flag,
@@ -145,7 +145,7 @@ def parse_wireguard_protocol(
         source_ip = re.findall(r"[0-9]+(?:\.[0-9]+){3}", peer["endpoint"])[0]
         db_dict = db_reader.get(source_ip)
         country_code = db_dict["country"]["iso_code"]
-        city = db_dict["city"]["names"]["en"]
+ #       city = db_dict["city"]["names"]["en"]
         coordinates = (
             db_dict["location"]["latitude"],
             db_dict["location"]["longitude"],
@@ -154,7 +154,7 @@ def parse_wireguard_protocol(
         if public_key_peer_logs == public_key_connected:
             result = detect_impossible_travel(
                 userID,
-                city,
+  #              city,
                 coordinates,
                 country_code,
                 unique_data,
@@ -185,32 +185,32 @@ def parse_log_entry(
     timestamp_seconds = timestamp_microseconds / 1000000
     datetime_object = datetime.fromtimestamp(timestamp_seconds)
     try:
-        protocol = message.find("*")
-        if protocol != -1:  # Do Wireguard parsing
-            if wireguard_dict["peers"]:
-                result = parse_wireguard_protocol(
-                    message,
-                    wireguard_dict,
-                    userID,
-                    datetime_object,
-                    timestamp_seconds,
-                    unique_data,
-                    db_reader,
-                    last_login_info,
-                )
-                return result
-            else:
-                print("No WireGuard peers currently connected.\n")
+        #protocol = message.find("*")
+        #if protocol != -1:  # Do Wireguard parsing
+       # if wireguard_dict["peers"]:
+        #    result = parse_wireguard_protocol(
+         #           message,
+          #          wireguard_dict,
+           #         userID,
+            #        datetime_object,
+             #       timestamp_seconds,
+              #      unique_data,
+               #     db_reader,
+                #    last_login_info,
+                #)
+           # return result
+        #else:
+         #   print("No WireGuard peers currently connected.\n")
 
-        else:  # Do openVPN parsing
-            if message.split()[0] == "LOCATION":
-                city_name_list = message.split()[3:-3]
-                city_name = " ".join(city_name_list)
-                country_code = message.split()[-1]
-                coordinates = (message.split()[-3], message.split()[-2])
-                result = detect_impossible_travel(
+          # Do openVPN parsing
+        if message.split()[0] == "LOCATION":
+#            city_name_list = message.split()[3:-3]
+ #           city_name = " ".join(city_name_list)
+            country_code = message.split()[-1]
+            coordinates = (message.split()[-3], message.split()[-2])
+            result = detect_impossible_travel(
                     userID,
-                    city_name,
+#                    city_name,
                     coordinates,
                     country_code,
                     unique_data,
@@ -219,7 +219,7 @@ def parse_log_entry(
                     datetime_object,
                     "openVPN",
                 )
-                return result
+            return result
             # else:
             #   print("No unique source IP for protocol openVPN in next logs\n")
 

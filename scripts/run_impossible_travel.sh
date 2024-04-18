@@ -27,7 +27,7 @@ create_directory "$LOG_DIR_PATH"
 TIME_NOW=$(date +"%d-%m-%y_%H:%M")
 
 #Capture journal logs
-journalctl --no-pager -t vpn-user-portal -t connect_script.py --since "30 minutes ago" -o json > "$LOG_DIR_PATH"journal-logs.json
+journalctl --no-pager -t vpn-user-portal -t openvpn_connect_script.py --since "30 minutes ago" -o json > "$LOG_DIR_PATH"journal-logs.json
 
 #Capture active WireGuard peers
 sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
@@ -35,6 +35,7 @@ sudo wg show all > "$LOG_DIR_PATH"wireguard-peers.txt
 #Run python script 
 mapfile -t OUTPUT < <(python3 impossible_travel.py "$LOG_DIR_PATH"journal-logs.json $DB_PATH "$LOG_DIR_PATH"wireguard-peers.txt "$LOG_DIR_PATH"outfile_"$TIME_NOW".json)
 
+echo "OUPUT FROM PYTHON: ${OUTPUT[@]}"
 #Notify host if an impossible travel occurred
 if echo "${OUTPUT[@]}" | grep -q "True"; then
 	mailx -s "WARNING: Impossible Travel Detected" "$LOGNAME"@"$HOSTNAME" <<< "Impossible travel has occured on your server, please check the log files for additional information"
@@ -42,9 +43,10 @@ fi
 
 #Remove logged wireguard data
 rm "$LOG_DIR_PATH"wireguard-peers.txt
-
+: '
 #Check if cronjob already exists for current user before adding it
 CRONJOB_EXISTS=$(crontab -u "$LOGNAME" -l 2>/dev/null | grep -c "run_impossible_travel.sh")
+
 if [ "$CRONJOB_EXISTS" -eq 0 ]; 
 then
 	echo "Trying to add cronjob"
@@ -53,3 +55,4 @@ then
 else
 	echo "Cronjob already exists."
 fi
+'
