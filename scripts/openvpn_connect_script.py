@@ -13,7 +13,7 @@ def main():
     orig_ip = os.getenv("VPN_ORIGINATING_IP")
     if not orig_ip:
         return
-    
+
     try:
         country = os.getenv("VPN_GEO_IP_CC")
         geo = os.getenv("VPN_GEO_IP_URI").split(":")[1]
@@ -21,7 +21,7 @@ def main():
         lon = geo.split(",")[1]
         proto = os.getenv("VPN_PROTO")
         syslog.syslog(
-                syslog.LOG_INFO, f"LOCATION {user_id} {proto} {lat} {lon} {country}"
+            syslog.LOG_INFO, f"LOCATION {user_id} {proto} {lat} {lon} {country}"
         )
     except Exception as e:
         syslog.syslog(syslog.LOG_ERR, f"Failed retrieving info: {str(e)}")

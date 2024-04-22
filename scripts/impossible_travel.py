@@ -1,6 +1,5 @@
 import json
 from os.path import exists
-import ipaddress
 from datetime import datetime
 import sys
 import re
@@ -10,16 +9,14 @@ from geopy.distance import geodesic as GD
 
 
 def load_data(db_file_path):
-    if not exists(db_file_path):  # or not exists(db_asn_path):
+    if not exists(db_file_path):
         print(
-            f"Cannot find dataset(s) at {db_file_path}\n",  # or {db_asn_path}\n",
+            f"Cannot find dataset(s) at {db_file_path}\n",
             file=sys.stderr,
         )
         sys.exit(1)
 
-    return maxminddb.open_database(db_file_path)  # , maxminddb.open_database(
-    #  db_city_path
-    # )
+    return maxminddb.open_database(db_file_path)
 
 
 def wireguard_data_to_dict(wireguard_peers):
@@ -57,7 +54,6 @@ def wireguard_data_to_dict(wireguard_peers):
 
 def detect_impossible_travel(
     userID,
-   # city,
     coordinates,
     country_code,
     unique_data,
@@ -77,7 +73,6 @@ def detect_impossible_travel(
                 {
                     "timestamp": str(datetime_object),
                     "protocol": protocol,
-#                    "city": city,
                     "coordinates": coordinates,
                     "country_code": country_code,
                     "impossible_travel_flag": travel_flag,
@@ -104,18 +99,17 @@ def detect_impossible_travel(
             if speed > max_speed:  # Travelled faster than 1000km/h
                 travel_flag = True
                 print(
-                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n Last login from {coordinates} in {country_code} at {datetime_object}.\n'
+                    f"Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n Last login from {coordinates} in {country_code} at {datetime_object}.\n"
                 )
             else:
                 print(
-                    f'Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n User hopped location within a valid timespan with last login from {coordinates} in {country_code} at {datetime_object}.\n'
+                    f"Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n User hopped location within a valid timespan with last login from {coordinates} in {country_code} at {datetime_object}.\n"
                 )
 
         last_login_info[userID].append(
             {
                 "timestamp": str(datetime_object),
                 "protocol": protocol,
- #               "city": city,
                 "coordinates": coordinates,
                 "country_code": country_code,
                 "impossible_travel_flag": travel_flag,
@@ -145,7 +139,7 @@ def parse_wireguard_protocol(
         source_ip = re.findall(r"[0-9]+(?:\.[0-9]+){3}", peer["endpoint"])[0]
         db_dict = db_reader.get(source_ip)
         country_code = db_dict["country"]["iso_code"]
- #       city = db_dict["city"]["names"]["en"]
+        #       city = db_dict["city"]["names"]["en"]
         coordinates = (
             db_dict["location"]["latitude"],
             db_dict["location"]["longitude"],
@@ -154,7 +148,7 @@ def parse_wireguard_protocol(
         if public_key_peer_logs == public_key_connected:
             result = detect_impossible_travel(
                 userID,
-  #              city,
+                #              city,
                 coordinates,
                 country_code,
                 unique_data,
@@ -185,40 +179,37 @@ def parse_log_entry(
     timestamp_seconds = timestamp_microseconds / 1000000
     datetime_object = datetime.fromtimestamp(timestamp_seconds)
     try:
-        #protocol = message.find("*")
-        #if protocol != -1:  # Do Wireguard parsing
-       # if wireguard_dict["peers"]:
+        # protocol = message.find("*")
+        # if protocol != -1:  # Do Wireguard parsing
+        # if wireguard_dict["peers"]:
         #    result = parse_wireguard_protocol(
-         #           message,
-          #          wireguard_dict,
-           #         userID,
-            #        datetime_object,
-             #       timestamp_seconds,
-              #      unique_data,
-               #     db_reader,
-                #    last_login_info,
-                #)
-           # return result
-        #else:
-         #   print("No WireGuard peers currently connected.\n")
+        #           message,
+        #          wireguard_dict,
+        #         userID,
+        #        datetime_object,
+        #       timestamp_seconds,
+        #      unique_data,
+        #     db_reader,
+        #    last_login_info,
+        # )
+        # return result
+        # else:
+        #   print("No WireGuard peers currently connected.\n")
 
-          # Do openVPN parsing
+        # Do openVPN parsing
         if message.split()[0] == "LOCATION":
-#            city_name_list = message.split()[3:-3]
- #           city_name = " ".join(city_name_list)
             country_code = message.split()[-1]
             coordinates = (message.split()[-3], message.split()[-2])
             result = detect_impossible_travel(
-                    userID,
-#                    city_name,
-                    coordinates,
-                    country_code,
-                    unique_data,
-                    last_login_info,
-                    timestamp_seconds,
-                    datetime_object,
-                    "openVPN",
-                )
+                userID,
+                coordinates,
+                country_code,
+                unique_data,
+                last_login_info,
+                timestamp_seconds,
+                datetime_object,
+                "openVPN",
+            )
             return result
             # else:
             #   print("No unique source IP for protocol openVPN in next logs\n")
@@ -269,7 +260,7 @@ if __name__ == "__main__":
         db_file,
         wireguard_peers,
         output_file,
-    ) = sys.argv[1:6]
+    ) = sys.argv[1:5]
 
     db_reader = load_data(db_file)
 
