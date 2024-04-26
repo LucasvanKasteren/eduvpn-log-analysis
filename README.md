@@ -17,9 +17,9 @@ A schematic overview can be found at the bottom of this document (04-2024: outda
 Since eduVPN is based on both OpenVPN and WireGuard the tool distinguishes between the two. 
 For openVPN the tool utilizes the [eduVPN script connection hook](https://docs.eduvpn.org/server/v3/script-connection-hook.html) to map the source IP of a connected user directly to geolocation information. This is done instead of explicit OpenVPN logging to preserve user privacy. As of vpn-user-portal >= 3.6.1 the mapping of geolocation information happens server side and exposes the `VPN_GEO_IP_CC` and `VPN_GEO_URI` variables to the connection hook script. 
 
-WireGuard does not have the functionality of logging/exposing the `ORIGINATING_IP` to the connection hooks. The reason for this is that with WireGuard there is no "VPN connect" as such. The server sets up the WireGuard config for the client and tears it down when it is removed or no longer needed/valid. For future work, to avoid polling, perhaps a "good enough" scenario is to determine the `ORIGINATING_IP` the moment the VPN configuration is added, i.e. through the VPN client API or portal download and use that (see [here](https://codeberg.org/eduVPN/vpn-user-portal/issues/7).
+WireGuard does not have the functionality of logging/exposing the `ORIGINATING_IP` to the connection hooks. The reason for this is that with WireGuard there is no "VPN connect" as such. The server sets up the WireGuard config for the client and tears it down when it is removed or no longer needed/valid. For future work, to avoid polling, perhaps a "good enough" scenario is to determine the `ORIGINATING_IP` the moment the VPN configuration is added, i.e. through the VPN client API or portal download and use that (see [here](https://codeberg.org/eduVPN/vpn-user-portal/issues/7)).
 
-In our tool we have found a workaround (which currently is not enabled, see previous section) for above demanding the use of the `wg show all` command to identify all active peers and their source IPs. The output of the command is written to a text file and converted to a dictionary. The journal logs are only used to map the public key of a connected user to the source IP in the dictionary created with `wg show all`. Afterwards, the text file is removed and hence no explicit logging is kept. Moreover, for WireGuard we use the MaxMind-DB-Reader python library to map the source IP of an activate WireGuard connection to geolocation information. 
+In this tool we have found a workaround (which currently is not enabled, see previous section) for above demanding the use of the `wg show all` command to identify all active peers and their source IPs. The output of the command is written to a text file and converted to a dictionary. The journal logs are only used to map the public key of a connected user to the source IP in the dictionary created with `wg show all`. Afterwards, the text file is removed and hence no explicit logging is kept. Moreover, for WireGuard we use the MaxMind-DB-Reader python library to map the source IP of an activate WireGuard connection to geolocation information. 
 
 The limitation of WireGuard here is that it is only possible to capture the source IPs of active connections. Hence, a WireGuard connection can still evade detection if it connects and disconnects before the script runs again. To minimize this risk, a cronjob for repeated execution of the script is setup to run every 5 minutes.
 
@@ -49,7 +49,7 @@ The tool also uses one smaller component:
 ### Script Connection Hook: `openvpn_connect_script.py`
 
 ### Purpose
-The purpose of this script is to not use explicit source IP address logging for OpenVPN to preserve user privacy. It makes use of the script connection hook of eduVPN which exposes environment variables to the script and converts the source IP address to geolocation information of a user connected via OpenVPN. Afterwards the masked output is written to syslog.
+The purpose of this script is to not use explicit source IP address logging for OpenVPN to preserve user privacy. It makes use of the script connection hook of eduVPN which exposes environment variables to the script and logs geolocation information of a user connected via OpenVPN. Afterwards the masked output is written to syslog.
 
 #### Tasks
 1. **Check user connection**
@@ -68,7 +68,7 @@ It used to leverage the MaxMind-DB-Reader to map IP addresses to geolocation for
 
 #### Functions
 1. `load_data(db_file_path)`
-   - Loads the IP to Country Lite and IP to ASN Lite databases from the specified file path using the MaxMind-DB-Reader library. This is still necessary to do source IP to geolocation conversion for WireGuard connections. 
+   - Loads the IP to City Lite databases from the specified file path using the MaxMind-DB-Reader library. This is still necessary to do source IP to geolocation conversion for WireGuard connections. 
 2. `wireguard_data_to_dict(wireguard_peers)`
    - Parses the WireGuard configuration data from `wg show` to a text file and organises it into a dictionary for easy accessing. 
 3. `parse_wireguard_protocol(...)`
@@ -120,7 +120,7 @@ The `run_impossible_travel.sh` shell script manages the execution of the Python 
 
 - To run the python script we use python. Specifically it was tested using python3.11.2.
 
-- Two python packages need to be installed to run the tool. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb python3-geopy`. For Fedora: `sudo dnf install python3-maxminddb python3-geopy`. Since WireGuard is currently disabled, one does not need to install `python3-maxminddb`. 
+- Currently only one python package need to be installed to run the tool. For Debian and Ubuntu: `sudo apt-get install python3-maxminddb python3-geopy`. For Fedora: `sudo dnf install python3-maxminddb python3-geopy`. Since WireGuard is currently disabled, one does not need to install `python3-maxminddb`. 
 
 - According to the eduVPN documentation, to enable the script connection hook feature, a good location to put the `openvpn_connect_script.py` is in the `/usr/local/bin` folder. For now it only works if you put the database in the `/usr/local/share/DB-IP/` folder as specified in the [docs](https://docs.eduvpn.org/server/v3/geo-ip.html).
 
