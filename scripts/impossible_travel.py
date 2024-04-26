@@ -4,7 +4,7 @@ from datetime import datetime
 import sys
 import re
 from collections import defaultdict
-import maxminddb
+#import maxminddb
 from geopy.distance import geodesic as GD
 
 
@@ -139,7 +139,6 @@ def parse_wireguard_protocol(
         source_ip = re.findall(r"[0-9]+(?:\.[0-9]+){3}", peer["endpoint"])[0]
         db_dict = db_reader.get(source_ip)
         country_code = db_dict["country"]["iso_code"]
-        #       city = db_dict["city"]["names"]["en"]
         coordinates = (
             db_dict["location"]["latitude"],
             db_dict["location"]["longitude"],
@@ -148,7 +147,6 @@ def parse_wireguard_protocol(
         if public_key_peer_logs == public_key_connected:
             result = detect_impossible_travel(
                 userID,
-                #              city,
                 coordinates,
                 country_code,
                 unique_data,
@@ -262,8 +260,8 @@ if __name__ == "__main__":
         output_file,
     ) = sys.argv[1:5]
 
-    db_reader = load_data(db_file)
-
+    #db_reader = load_data(db_file)
+    db_reader = ""
     results = get_log_details(journal_json_log_file, db_reader, wireguard_peers)
 
     if results:
