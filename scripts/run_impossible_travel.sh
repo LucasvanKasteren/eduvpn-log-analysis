@@ -5,7 +5,7 @@
 #fi
  
 #Paths to the database and log folder
-DB_PATH=/usr/local/bin/dbip-city-lite-2024-04.mmdb
+DB_PATH=/usr/local/share/DB-IP/dbip-city-lite-2024-04.mmdb
 LOG_DIR_PATH=../logs/
 #Cron job time in minutes
 CRON_TIME=5

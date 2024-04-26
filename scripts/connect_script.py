@@ -17,7 +17,7 @@ def main():
         return
     db = None
     with maxminddb.open_database(
-        "/usr/local/bin/dbip-city-lite-2024-04.mmdb"
+        "/usr/local/share/DB-IP/dbip-city-lite-2024-04.mmdb"
     ) as reader:
         db = reader.get(orig_ip)
     if not db:
