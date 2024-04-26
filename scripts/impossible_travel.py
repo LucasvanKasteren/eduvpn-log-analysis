@@ -1,14 +1,18 @@
+"""Module providing functions to detect the impossible travel principle in python."""
+
 import json
 from os.path import exists
 from datetime import datetime
 import sys
 import re
 from collections import defaultdict
-#import maxminddb
+
+# import maxminddb
 from geopy.distance import geodesic as GD
 
 
 def load_data(db_file_path):
+    """Load MaxMind database from the given file path."""
     if not exists(db_file_path):
         print(
             f"Cannot find dataset(s) at {db_file_path}\n",
@@ -20,10 +24,11 @@ def load_data(db_file_path):
 
 
 def wireguard_data_to_dict(wireguard_peers):
+    """Convert WireGuard peers data from a text file to a dictionary format."""
     wireguard_data = defaultdict(list)
     current_interface = {}
     current_peer = {}
-    with open(wireguard_peers, "r") as f:
+    with open(wireguard_peers, "r", encoding="utf-8") as f:
         content = f.read()
         splitcontent = content.splitlines()
         for line in splitcontent:
@@ -53,7 +58,7 @@ def wireguard_data_to_dict(wireguard_peers):
 
 
 def detect_impossible_travel(
-    userID,
+    user_id,
     coordinates,
     country_code,
     unique_data,
@@ -63,13 +68,14 @@ def detect_impossible_travel(
     protocol,
     travel_flag=False,
 ):
-    if (userID, coordinates, country_code) not in unique_data:
-        unique_data.add((userID, coordinates, country_code))
+    """Detect impossible travel based on user's login information."""
+    if (user_id, coordinates, country_code) not in unique_data:
+        unique_data.add((user_id, coordinates, country_code))
 
         if not last_login_info[
-            userID
+            user_id
         ]:  # If the user has not been seen before log the data
-            last_login_info[userID].append(
+            last_login_info[user_id].append(
                 {
                     "timestamp": str(datetime_object),
                     "protocol": protocol,
@@ -79,17 +85,17 @@ def detect_impossible_travel(
                 }
             )
 
-            return userID, last_login_info[userID][-1]
+            return user_id, last_login_info[user_id][-1]
 
-        elif (  # Check if a user who previously logged in, has different coordinates
-            last_login_info[userID][-1]["coordinates"] != coordinates
+        if (  # Check if a user who previously logged in, has different coordinates
+            last_login_info[user_id][-1]["coordinates"] != coordinates
         ):
-            last_timestamp_string = last_login_info[userID][-1]["timestamp"]
+            last_timestamp_string = last_login_info[user_id][-1]["timestamp"]
             last_timestamp = datetime.timestamp(
                 datetime.strptime(last_timestamp_string, "%Y-%m-%d %H:%M:%S.%f")
             )
             time_difference = timestamp_seconds - last_timestamp
-            old_coordinates = last_login_info[userID][-1]["coordinates"]
+            old_coordinates = last_login_info[user_id][-1]["coordinates"]
             # Calculate the distance between the old login and new login using the geodesic distance
             distance = GD(coordinates, old_coordinates).km
             # Convert time difference from seconds to hours
@@ -99,14 +105,14 @@ def detect_impossible_travel(
             if speed > max_speed:  # Travelled faster than 1000km/h
                 travel_flag = True
                 print(
-                    f"Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n Last login from {coordinates} in {country_code} at {datetime_object}.\n"
+                    f"Impossible travel flag set to {travel_flag} for user {user_id} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n Last login from {coordinates} in {country_code} at {datetime_object}.\n"
                 )
             else:
                 print(
-                    f"Impossible travel flag set to {travel_flag} for user {userID} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n User hopped location within a valid timespan with last login from {coordinates} in {country_code} at {datetime_object}.\n"
+                    f"Impossible travel flag set to {travel_flag} for user {user_id} who traveled {distance} km at speed {speed} km/h for {time_difference/3600} hrs.\n User hopped location within a valid timespan with last login from {coordinates} in {country_code} at {datetime_object}.\n"
                 )
 
-        last_login_info[userID].append(
+        last_login_info[user_id].append(
             {
                 "timestamp": str(datetime_object),
                 "protocol": protocol,
@@ -116,7 +122,7 @@ def detect_impossible_travel(
             }
         )
 
-        return userID, last_login_info[userID][-1]
+        return user_id, last_login_info[user_id][-1]
 
     return None
 
@@ -124,16 +130,16 @@ def detect_impossible_travel(
 def parse_wireguard_protocol(
     message,
     wireguard_dict,
-    userID,
+    user_id,
     datetime_object,
     timestamp_seconds,
     unique_data,
     db_reader,
     last_login_info,
 ):
-    userInfo = re.split(r"\(|:|\)", message.split()[2])
-    profile_id = userInfo[1]
-    public_key_peer_logs = userInfo[2]
+    """Parse WireGuard protocol log messages and call impossible travel on it."""
+    user_info = re.split(r"\(|:|\)", message.split()[2])
+    public_key_peer_logs = user_info[2]
     for peer in wireguard_dict["peers"]:
         public_key_connected = peer["peer"]
         source_ip = re.findall(r"[0-9]+(?:\.[0-9]+){3}", peer["endpoint"])[0]
@@ -146,7 +152,7 @@ def parse_wireguard_protocol(
         # Map the public key of connected user to the one in the logs to check if the user is still connected
         if public_key_peer_logs == public_key_connected:
             result = detect_impossible_travel(
-                userID,
+                user_id,
                 coordinates,
                 country_code,
                 unique_data,
@@ -156,10 +162,9 @@ def parse_wireguard_protocol(
                 "WireGuard",
             )
             return result
-        else:
-            print(
-                f"User {userID} with public key {public_key_peer_logs} used WireGuard and is no longer connected.\n"
-            )
+        print(
+            f"User {user_id} with public key {public_key_peer_logs} used WireGuard and is no longer connected.\n"
+        )
 
     return None
 
@@ -171,8 +176,9 @@ def parse_log_entry(
     last_login_info,
     wireguard_dict,
 ):
+    """Parse log entries for both openvpn and wireguard connections"""
     message = log_entry["MESSAGE"]
-    userID = message.split()[1]
+    user_id = message.split()[1]
     timestamp_microseconds = int(log_entry["__REALTIME_TIMESTAMP"])
     timestamp_seconds = timestamp_microseconds / 1000000
     datetime_object = datetime.fromtimestamp(timestamp_seconds)
@@ -183,7 +189,7 @@ def parse_log_entry(
         #    result = parse_wireguard_protocol(
         #           message,
         #          wireguard_dict,
-        #         userID,
+        #         user_id,
         #        datetime_object,
         #       timestamp_seconds,
         #      unique_data,
@@ -199,7 +205,7 @@ def parse_log_entry(
             country_code = message.split()[-1]
             coordinates = (message.split()[-3], message.split()[-2])
             result = detect_impossible_travel(
-                userID,
+                user_id,
                 coordinates,
                 country_code,
                 unique_data,
@@ -212,13 +218,14 @@ def parse_log_entry(
             # else:
             #   print("No unique source IP for protocol openVPN in next logs\n")
 
-    except Exception as e:
+    except ValueError as e:
         print(f"An error occurred while parsing: {e}\n", file=sys.stderr)
 
     return None
 
 
-def get_log_details(json_path, db_reader, wireguard_peers):
+def get_log_details(json_path, db_reader_object, wireguard_peers_file):
+    """Get connection details from JSON journal log file and write results to dictionary."""
     if not exists(json_path):
         print("Cannot find given json\n", file=sys.stderr)
         sys.exit(1)
@@ -226,26 +233,27 @@ def get_log_details(json_path, db_reader, wireguard_peers):
     unique_data = set()
     results_dict = defaultdict(list)
     last_login_info = defaultdict(list)
-    wireguard_dict = wireguard_data_to_dict(wireguard_peers)
+    wireguard_dict = wireguard_data_to_dict(wireguard_peers_file)
 
-    with open(json_path, "r") as json_file:
+    with open(json_path, "r", encoding="utf-8") as json_file:
         for line in json_file:
             log_dict = json.loads(line)
             result = parse_log_entry(
                 log_dict,
-                db_reader,
+                db_reader_object,
                 unique_data,
                 last_login_info,
                 wireguard_dict,
             )
             if result:
-                userID, log_details = result
-                results_dict[userID].append(log_details)
+                user_id, log_details = result
+                results_dict[user_id].append(log_details)
 
     return results_dict
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point of the script."""
     if len(sys.argv) != 5:
         print(
             "Usage: python impossible_travel.py <journal_json_log_file> <db_file> <wireguard_peers> <output_file>\n",
@@ -260,14 +268,18 @@ if __name__ == "__main__":
         output_file,
     ) = sys.argv[1:5]
 
-    #db_reader = load_data(db_file)
+    # db_reader = load_data(db_file)
     db_reader = ""
     results = get_log_details(journal_json_log_file, db_reader, wireguard_peers)
 
     if results:
-        with open(output_file, "w") as fp:
+        with open(output_file, "w", encoding="utf-8") as fp:
             json.dump(results, fp, indent=2)
 
         print("Written results to file\n")
     else:
         print("No login attempts happened in the last hour\n")
+
+
+if __name__ == "__main__":
+    main()

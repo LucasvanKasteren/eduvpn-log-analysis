@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+"""Module providing a function for logging geolocation for users connected via openvpn."""
 
 import os
 import syslog
 
 
 def main():
+    """Main function for retrieving environment variables and logging user activity."""
     ev = os.getenv("VPN_EVENT")
     user_id = os.getenv("VPN_USER_ID")
     if ev != "C":
@@ -23,7 +25,7 @@ def main():
         syslog.syslog(
             syslog.LOG_INFO, f"LOCATION {user_id} {proto} {lat} {lon} {country}"
         )
-    except Exception as e:
+    except ValueError as e:
         syslog.syslog(syslog.LOG_ERR, f"Failed retrieving info: {str(e)}")
 
 
